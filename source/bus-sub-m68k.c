@@ -321,42 +321,44 @@ static cc_u32f SyncMCDM68kCallbackIterate(void* const user_data, const cc_u32f t
 	if (clownmdemu->state.mega_cd.m68k.bus_requested || clownmdemu->state.mega_cd.m68k.reset_held)
 		return total_cycles;
 
-	return Clown68000_DoCycles(&clownmdemu->mega_cd.m68k, &m68k_read_write_callbacks, total_cycles / CLOWNMDEMU_MCD_M68K_CLOCK_DIVIDER) * CLOWNMDEMU_MCD_M68K_CLOCK_DIVIDER;
+	return Clown68000_DoCycles(&clownmdemu->mega_cd.m68k, &m68k_read_write_callbacks, CC_DIVIDE_CEILING(total_cycles, CLOWNMDEMU_MCD_M68K_CLOCK_DIVIDER)) * CLOWNMDEMU_MCD_M68K_CLOCK_DIVIDER;
 }
 
-static cc_u32f SyncMCDM68kCallback(void* const user_data, const cc_u32f total_cycles)
+static cc_u32f SyncMCDM68kCallback(void* const user_data, const cc_u32f total_cycles_to_do)
 {
 	CPUCallbackUserData* const other_state = (CPUCallbackUserData*)user_data;
 	ClownMDEmu* const clownmdemu = other_state->clownmdemu;
 
-	cc_u32f cycles_done = 0;
-	while (cycles_done < total_cycles)
+	cc_u32f total_cycles_done = 0;
+	while (total_cycles_done < total_cycles_to_do)
 	{
-		cc_u32f cycles_to_do = total_cycles - cycles_done;
+		cc_u32f cycles_to_do = total_cycles_to_do - total_cycles_done;
+		cc_u32f cycles_done;
 
 		if (clownmdemu->state.mega_cd.irq.irq3_countdown_master != 0)
-			cycles_to_do = CC_MIN(cycles_to_do, clownmdemu->state.mega_cd.irq.irq3_countdown);
+			cycles_to_do = CC_MIN(cycles_to_do, clownmdemu->state.mega_cd.irq.irq3_countdown_master - clownmdemu->state.mega_cd.irq.irq3_countdown);
 
-		other_state->sync.mcd_m68k.current_cycle += SyncMCDM68kCallbackIterate(user_data, cycles_to_do);
+		cycles_done = SyncMCDM68kCallbackIterate(user_data, cycles_to_do);
+
+		total_cycles_done += cycles_done;
+		other_state->sync.mcd_m68k.current_cycle += cycles_done;
 
 		/* Handle IRQ3 interrupt countdown here. */
 		if (clownmdemu->state.mega_cd.irq.irq3_countdown_master != 0)
 		{
-			clownmdemu->state.mega_cd.irq.irq3_countdown -= cycles_to_do;
+			clownmdemu->state.mega_cd.irq.irq3_countdown += cycles_done;
 
-			if (clownmdemu->state.mega_cd.irq.irq3_countdown == 0)
+			if (clownmdemu->state.mega_cd.irq.irq3_countdown >= clownmdemu->state.mega_cd.irq.irq3_countdown_master)
 			{
+				clownmdemu->state.mega_cd.irq.irq3_countdown -= clownmdemu->state.mega_cd.irq.irq3_countdown_master;
+
 				if (clownmdemu->state.mega_cd.irq.enabled[2])
 					Clown68000_Interrupt(&clownmdemu->mega_cd.m68k, 3);
-
-				clownmdemu->state.mega_cd.irq.irq3_countdown = clownmdemu->state.mega_cd.irq.irq3_countdown_master;
 			}
 		}
-
-		cycles_done += cycles_to_do;
 	}
 
-	return cycles_done;
+	return total_cycles_done;
 }
 
 void MCDM68kInterruptAcknowledgeCallback(const void* const user_data)
@@ -1190,7 +1192,8 @@ void MCDM68kWriteCallbackWithCycle(const void* const user_data, const cc_u32f ad
 		if (do_low_byte) /* TODO: Does setting just the upper byte cause this to be updated anyway? */
 		{
 			/* Timer W/INT3 */
-			clownmdemu->state.mega_cd.irq.irq3_countdown_master = clownmdemu->state.mega_cd.irq.irq3_countdown = low_byte == 0 ? 0 : (low_byte + 1) * CLOWNMDEMU_MCD_M68K_CLOCK_DIVIDER * CLOWNMDEMU_PCM_SAMPLE_RATE_DIVIDER;
+			clownmdemu->state.mega_cd.irq.irq3_countdown_master = low_byte == 0 ? 0 : (low_byte + 1) * CLOWNMDEMU_MCD_M68K_CLOCK_DIVIDER * CLOWNMDEMU_PCM_SAMPLE_RATE_DIVIDER;
+			clownmdemu->state.mega_cd.irq.irq3_countdown = 0;
 		}
 	}
 	else if (address == 0xFF8032)

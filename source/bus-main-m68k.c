@@ -271,7 +271,7 @@ static cc_u32f SyncM68kCallbackIterate(CPUCallbackUserData* const other_state, c
 		m68k_read_write_callbacks.interrupt_acknowledge_callback = M68kInterruptAcknowledgeCallback;
 		m68k_read_write_callbacks.user_data = other_state;
 
-		return Clown68000_DoCycles(&clownmdemu->m68k, &m68k_read_write_callbacks, total_cycles / CLOWNMDEMU_M68K_CLOCK_DIVIDER) * CLOWNMDEMU_M68K_CLOCK_DIVIDER;
+		return Clown68000_DoCycles(&clownmdemu->m68k, &m68k_read_write_callbacks, CC_DIVIDE_CEILING(total_cycles, CLOWNMDEMU_M68K_CLOCK_DIVIDER)) * CLOWNMDEMU_M68K_CLOCK_DIVIDER;
 	}
 }
 
@@ -283,12 +283,7 @@ static cc_u32f SyncM68kCallback(void* const user_data, const cc_u32f total_cycle
 
 	do
 	{
-		const cc_u32f cycles_remaining = total_cycles - total_cycles_done;
-
-		const cc_u32f cycles_done = SyncM68kCallbackIterate(other_state, cycles_remaining);
-
-		if (cycles_done == 0)
-			break;
+		const cc_u32f cycles_done = SyncM68kCallbackIterate(other_state, total_cycles - total_cycles_done);
 
 		total_cycles_done += cycles_done;
 		other_state->sync.m68k.current_cycle += cycles_done;
