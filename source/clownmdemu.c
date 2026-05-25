@@ -132,7 +132,7 @@ static void ClownMDEmu_State_Initialise(ClownMDEmu* const clownmdemu)
 	clownmdemu->state.mega_cd.rotation.image_buffer_y_offset = 0;
 
 	clownmdemu->state.mega_cd.cd_inserted = cc_false;
-	clownmdemu->state.mega_cd.hblank_address = 0xFFFF;
+	clownmdemu->state.mega_cd.hblank_address = 0xFD0C; /* Points at the level 4 interrupt trampoline in WORK-RAM. */ /* TODO: Is this actually hardware-accurate? */
 	clownmdemu->state.mega_cd.delayed_dma_word = 0;
 
 	/* Low-pass filters. */
