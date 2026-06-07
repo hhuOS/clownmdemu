@@ -929,7 +929,7 @@ cc_u16f VDP_ReadControl(VDP* const vdp)
 	state->access.write_pending = cc_false;
 
 	/* TODO: The other flags. */
-	return 0x3400 | (fifo_empty << 9) | (state->currently_in_vblank << 3);
+	return 0x3400 | (fifo_empty << 9) | (state->currently_in_vblank << 7) | (state->currently_in_vblank << 3);
 }
 
 static void UpdateFakeFIFO(VDP_State* const state, const cc_u16f value)
