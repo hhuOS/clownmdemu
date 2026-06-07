@@ -148,6 +148,29 @@ static void MegaCDBIOSCall(ClownMDEmu* const clownmdemu, const void* const user_
 			clownmdemu->mega_cd.m68k.status_register &= ~1; /* Clear carry flag to signal that the BIOS is not busy. */
 			break;
 
+		case 0x81:
+			/* CDBSTAT */
+			/* TODO: Find the address that a real BIOS uses here. */
+			clownmdemu->mega_cd.m68k.address_registers[0] = 0x2800 * 2;
+			/* TODO: This is just a placeholder which is enough to get Popful Mail to boot. */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  0] = 0x0100; /* bios_status */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  1] = 0x0000; /* led */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  2] = 0x0000; /* cdd_status */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  3] = 0xFF02; /* Ditto (current song number) */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  4] = 0xFFFF; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  5] = 0xFFFF; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  6] = 0xFFFF; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  7] = 0xFFFF; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  8] = 0x01FF; /* First and last song numbers */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 +  9] = 0x0000; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 + 10] = 0x0000; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 + 11] = 0x0000; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 + 12] = 0x0000; /* Volume */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 + 13] = 0x0000; /* Ditto */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 + 14] = 0x0000; /* Header */
+			clownmdemu->state.mega_cd.prg_ram.buffer[0x2800 + 15] = 0x0000; /* Ditto */
+			break;
+
 		case 0x83:
 			/* CDBTOCREAD */
 			/* TODO: Complete this! */
